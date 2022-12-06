@@ -1,0 +1,38 @@
+﻿  Ray_Tracer.cpp
+C:\Users\sachi\OneDrive\Documents\ComputerGraphics\Ray Tracer Better\RayTracer\Ray_Tracer\material.h(154,1): warning C4305: 'initializing': truncation from 'double' to 'float'
+C:\Users\sachi\OneDrive\Documents\ComputerGraphics\Ray Tracer Better\RayTracer\Ray_Tracer\material.h(155,1): warning C4305: 'initializing': truncation from 'double' to 'float'
+C:\Users\sachi\OneDrive\Documents\ComputerGraphics\Ray Tracer Better\RayTracer\Ray_Tracer\material.h(161,18): warning C4244: 'initializing': conversion from '_Ty' to 'float', possible loss of data
+          with
+          [
+              _Ty=double
+          ]
+C:\Users\sachi\OneDrive\Documents\ComputerGraphics\Ray Tracer Better\RayTracer\Ray_Tracer\material.h(162,18): warning C4244: 'initializing': conversion from '_Ty' to 'float', possible loss of data
+          with
+          [
+              _Ty=double
+          ]
+C:\Users\sachi\OneDrive\Documents\ComputerGraphics\Ray Tracer Better\RayTracer\Ray_Tracer\material.h(168,22): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
+C:\Users\sachi\OneDrive\Documents\ComputerGraphics\Ray Tracer Better\RayTracer\Ray_Tracer\material.h(169,22): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
+C:\Users\sachi\OneDrive\Documents\ComputerGraphics\Ray Tracer Better\RayTracer\Ray_Tracer\sphere.h(3,10): warning C4067: unexpected tokens following preprocessor directive - expected a newline
+C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.32.31326\include\xutility(149,77): warning C4244: 'argument': conversion from '_Ty' to 'float', possible loss of data
+          with
+          [
+              _Ty=double
+          ]
+C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.32.31326\include\memory(2010): message : see reference to function template instantiation 'void std::_Construct_in_place<_Ty,vec3,double,double>(_Ty &,vec3 &&,double &&,double &&) noexcept(false)' being compiled
+          with
+          [
+              _Ty=lambert
+          ]
+C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.32.31326\include\memory(2729): message : see reference to function template instantiation 'std::_Ref_count_obj2<lambert>::_Ref_count_obj2<_Ty,double,double>(_Ty &&,double &&,double &&)' being compiled
+          with
+          [
+              _Ty=color
+          ]
+C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.32.31326\include\memory(2730): message : see reference to function template instantiation 'std::_Ref_count_obj2<lambert>::_Ref_count_obj2<_Ty,double,double>(_Ty &&,double &&,double &&)' being compiled
+          with
+          [
+              _Ty=color
+          ]
+C:\Users\sachi\OneDrive\Documents\ComputerGraphics\Ray Tracer Better\RayTracer\Ray_Tracer\Ray_Tracer.cpp(104): message : see reference to function template instantiation 'std::shared_ptr<lambert> std::make_shared<lambert,color,double,double>(color &&,double &&,double &&)' being compiled
+  Ray_Tracer.vcxproj -> C:\Users\sachi\OneDrive\Documents\ComputerGraphics\Ray Tracer Better\RayTracer\x64\Debug\Ray_Tracer.exe
