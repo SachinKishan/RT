@@ -4,7 +4,7 @@ C++ Ray tracer
 
 Some renders
 
-![](https://github.com/SachinKishan/RT/blob/main/Renders/Three%20balls%20different%20angle%20more%20specualr.png)
+![](https://github.com/SachinKishan/RT/blob/main/Renders/Three%20balls%20lambertian%20%2B%20blinn-phong%20shading.png)
 
 ![](https://github.com/SachinKishan/RT/blob/main/Renders/examplerender.png)
 
