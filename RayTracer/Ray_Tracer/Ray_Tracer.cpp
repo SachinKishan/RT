@@ -35,6 +35,7 @@ void encodeOneStep(const char* filename, std::vector<unsigned char>& image, unsi
 
 color ray_color(const ray& r, const hittable_list& world, int depth, bool scattering=true) {
     hit_record rec;
+    std::vector<bool> shouldLight;
     if (depth <= 0)
         return color(0, 0, 0);
 
@@ -42,22 +43,23 @@ color ray_color(const ray& r, const hittable_list& world, int depth, bool scatte
         ray scattered;
         color attenuation;
         color finalCol;
-        color shadowing=White;
+        color shadowing;
         for (PointLight l : world.lights)
         {
-            bool blocked = false;
+            bool blocked_by_all = true;
             hit_record shadowRec;
-            ray shadow_ray(rec.p+(rec.normal* 1e-4), l.lightDirection);
+            ray shadow_ray(rec.p + (rec.normal * 1e-4), l.lightDirection);
 
             if (world.hit(shadow_ray, 0.001, infinity, shadowRec))
             {
-                if (shadowRec.hit_one_point)shadowing = color(0.1, 0.1, 0.1);
-                else shadowing= Black;
+                shouldLight.push_back(false);
             }
+            else { shouldLight.push_back(true); blocked_by_all = false; }
+            shadowing = blocked_by_all ? Black : White;
 
         }
         
-        if (rec.mat_ptr->scatter(r, rec, attenuation, scattered,world.lights))
+        if (rec.mat_ptr->scatter(r, rec, attenuation, scattered,world.lights, shouldLight))
         {
             if (scattering)
                 finalCol= attenuation * ray_color(scattered, world, depth - 1);
@@ -81,11 +83,11 @@ hittable_list random_scene() {
     world.add(make_shared<sphere>(point3(0, -1000, 0), 1000, ground_material));
     
     vec3 directionOfLight1(7, 9, 9);
-    vec3 directionOfLight2(-9, 2, 9);
+    vec3 directionOfLight2(-9, 20, 9);
     color lightColor1(1, 1, 1);
     color lightColor2(1, 1, 1);
-    float intensityOfLight1 = 0.25;
-    float intensityOfLight2 = 0.3;
+    float intensityOfLight1 = 0.1;
+    float intensityOfLight2 = 0.1;
 
     PointLight l1(intensityOfLight1, directionOfLight1, lightColor1);
     PointLight l2(intensityOfLight2, directionOfLight2, lightColor2);
@@ -149,13 +151,13 @@ hittable_list random_scene() {
 	auto king2 = make_shared<lambert>(Green, diff , spec);
 	auto king3 = make_shared<lambert>(Blue, diff, spec);
 
-    world.add(make_shared<sphere>(point3(-0.1, 2, 4.7), 2, jesus));
+    //world.add(make_shared<sphere>(point3(-0.1, 2, 4.7), 2, jesus));
     world.add(make_shared<sphere>(point3(-4, 4, 0), 4, john));
-    world.add(make_shared<sphere>(point3(3.2, 3, 0.5), 3, mary));
-    world.add(make_shared<sphere>(point3(13, 4, 3.4 - 4 * 2.4), 4, king1));
-    world.add(make_shared<sphere>(point3(13+4*2, 4, 3.4-4*1.2), 4, king2));
-    world.add(make_shared<sphere>(point3(13+4*4, 4, 3.4), 4, king3));
-    world.add(make_shared<sphere>(point3(-16, 2.5, 1.3), 2.5, angel));
+    //world.add(make_shared<sphere>(point3(3.2, 3, 0.5), 3, mary));
+    //world.add(make_shared<sphere>(point3(13, 4, 3.4 - 4 * 2.4), 4, king1));
+    //world.add(make_shared<sphere>(point3(13+4*2, 4, 3.4-4*1.2), 4, king2));
+    //world.add(make_shared<sphere>(point3(13+4*4, 4, 3.4), 4, king3));
+    //world.add(make_shared<sphere>(point3(-16, 2.5, 1.3), 2.5, angel));
 
 
 
@@ -168,11 +170,11 @@ int main()
 	const char* filename = "out1.png";
 	std::vector<unsigned char> image;
 	const auto aspect_ratio = 1;
-	const int image_width = 1024;
+	const int image_width = 1024/2;
 	const int image_height = static_cast<int>(image_width / aspect_ratio);
 	int total = image_width * image_height;
-    const int samples_per_pixel = 100;
-    const int max_depth = 50;
+    const int samples_per_pixel = 10;
+    const int max_depth = 10;
 	//image resizing
 	image.resize(image_width * image_height * 4);
 

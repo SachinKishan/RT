@@ -12,7 +12,8 @@ class material {
 public:
     virtual bool scatter(
         const ray& r_in, const hit_record& rec, color& attenuation, ray& scattered
-    ,std::vector<PointLight> lights=std::vector<PointLight>()) const = 0;
+    ,std::vector<PointLight> lights
+    ,std::vector<bool> shouldLight) const = 0;
 
 
     virtual color emitted(double u, double v, const point3& p) const {
@@ -27,7 +28,7 @@ public:
 
     virtual bool scatter(
         const ray& r_in, const hit_record& rec, color& attenuation, ray& scattered,
-        std::vector<PointLight> lights) const override {
+        std::vector<PointLight> lights, std::vector<bool> shouldLight) const override {
         auto scatter_direction = rec.normal + random_unit_vector();
         // Catch degenerate scatter direction
         if (scatter_direction.near_zero())
@@ -51,7 +52,7 @@ public:
 
     virtual bool scatter(
         const ray& r_in, const hit_record& rec, color& attenuation, ray& scattered,
-        std::vector<PointLight> lights
+        std::vector<PointLight> lights, std::vector<bool> shouldLight
     ) const override {
         vec3 reflected = reflect(unit_vector(r_in.direction()), rec.normal);
         scattered = ray(rec.p, reflected + fuzz * random_in_unit_sphere());
@@ -69,7 +70,7 @@ public:
     dielectric(double index_of_refraction) : ir(index_of_refraction) {}
 
     virtual bool scatter(const ray& r_in, const hit_record& rec, color& attenuation, ray& scattered,
-        std::vector<PointLight> lights)const override
+        std::vector<PointLight> lights, std::vector<bool> shouldLight)const override
     {
         attenuation = color(1.0, 1.0, 1.0);
         double refraction_ratio = rec.front_face ? (1.0 / ir) : ir;
@@ -109,7 +110,7 @@ public:
 
     virtual bool scatter(
         const ray& r_in, const hit_record& rec, color& attenuation, ray& scattered,
-        std::vector<PointLight> lights
+        std::vector<PointLight> lights, std::vector<bool> shouldLight
     ) const override {
         return false;
     }
@@ -129,7 +130,7 @@ public:
     {}
 
     virtual bool scatter(const ray& r_in, const hit_record& rec, color& attenuation, ray& scattered,
-        std::vector<PointLight> lights) const override
+        std::vector<PointLight> lights, std::vector<bool> shouldLight) const override
     {
         attenuation = albedo;
         return true;
@@ -150,18 +151,21 @@ public:
     }
 
 	virtual bool scatter(const ray& r_in, const hit_record& rec, color& attenuation, ray& scattered,
-        std::vector<PointLight> lights) const override
+        std::vector<PointLight> lights, std::vector<bool> shouldLight) const override
 	{
 
         vec3 normal = rec.normal;
 
-        
+        int i = 0;
         for (PointLight l : lights)
         {
-            double lightValue = diffuseCoefficient * l.lightIntensity * std::max(0.0, dot(l.lightDirection, normal));
-            vec3 h = unit_vector(r_in.direction() + l.lightDirection);
-            float blinn = l.lightIntensity * std::pow((double)std::max(0.0, dot(normal, h)), (double)specularCoefficient);
-            attenuation += blinn * l.lightColor + albedo * lightValue;
+            if (shouldLight[i])
+            {
+                const double lightValue = diffuseCoefficient * l.lightIntensity * std::max(0.0, dot(l.lightDirection, normal));
+                vec3 h = unit_vector(r_in.direction() + l.lightDirection);
+                const float blinn = l.lightIntensity * std::pow((double)std::max(0.0, dot(normal, h)), (double)specularCoefficient);
+                attenuation += blinn * l.lightColor + albedo * lightValue;
+            }i++;
         }
 
         auto scatter_direction = rec.normal + random_unit_vector();
