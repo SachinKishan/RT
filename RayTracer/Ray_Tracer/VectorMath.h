@@ -76,9 +76,11 @@ using color = vec3;    // RGB color
 
 //some color additions
 const color Black = vec3(0);
+const color White = vec3(1);
 const color Red = vec3(1, 0, 0);
 const color Blue = vec3(0, 0, 1);
 const color Green = vec3(0, 1, 0);
+const color Brown = vec3(0.54, 0.26, 0.07);
 
 
 // vec3 Utility Functions

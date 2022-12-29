@@ -33,38 +33,67 @@ void encodeOneStep(const char* filename, std::vector<unsigned char>& image, unsi
 }
 #pragma endregion
 
-color ray_color(const ray& r, const hittable& world, int depth, bool scattering=true) {
+color ray_color(const ray& r, const hittable_list& world, int depth, bool scattering=true) {
     hit_record rec;
-
-    // If we've exceeded the ray bounce limit, no more light is gathered.
     if (depth <= 0)
         return color(0, 0, 0);
 
     if (world.hit(r, 0.001, infinity, rec)) {
         ray scattered;
         color attenuation;
-        if (rec.mat_ptr->scatter(r, rec, attenuation, scattered))
+        color finalCol;
+        color shadowing=White;
+        for (PointLight l : world.lights)
+        {
+            bool blocked = false;
+            hit_record shadowRec;
+            ray shadow_ray(rec.p+(rec.normal* 1e-4), l.lightDirection);
+
+            if (world.hit(shadow_ray, 0.001, infinity, shadowRec))
+            {
+                if (shadowRec.hit_one_point)shadowing = color(0.1, 0.1, 0.1);
+                else shadowing= Black;
+            }
+
+        }
+        
+        if (rec.mat_ptr->scatter(r, rec, attenuation, scattered,world.lights))
         {
             if (scattering)
-                return attenuation * ray_color(scattered, world, depth - 1);
+                finalCol= attenuation * ray_color(scattered, world, depth - 1);
             else
-                return attenuation;
+                finalCol= attenuation;
+        	return finalCol*shadowing;
         }
     	return color(0, 0, 0);
     }
 
     vec3 unit_direction = unit_vector(r.direction());
     auto t = 0.5 * (unit_direction.y() + 1.0);
-    return (1.0 - t) * color(1.0, 1.0, 1.0) + t * color(0.5, 0.7, 1.0);
+    return color(0.5, 0.7, 1.0);
 }
 
 
 hittable_list random_scene() {
     hittable_list world;
 
-    auto ground_material = make_shared<lambertian>(color(0.5, 0.5, 0.5));
+    auto ground_material = make_shared<lambert>(color(0.5, 0.5, 0.5),0.5,0);
     world.add(make_shared<sphere>(point3(0, -1000, 0), 1000, ground_material));
-    /*
+    
+    vec3 directionOfLight1(7, 9, 9);
+    vec3 directionOfLight2(-9, 2, 9);
+    color lightColor1(1, 1, 1);
+    color lightColor2(1, 1, 1);
+    float intensityOfLight1 = 0.25;
+    float intensityOfLight2 = 0.3;
+
+    PointLight l1(intensityOfLight1, directionOfLight1, lightColor1);
+    PointLight l2(intensityOfLight2, directionOfLight2, lightColor2);
+    world.lights.push_back(l1);
+    //world.lights.push_back(l2);
+
+
+	/*
     for (int a = -11; a < 11; a++) {
         for (int b = -11; b < 11; b++) {
             auto choose_mat = random_double();
@@ -100,14 +129,35 @@ hittable_list random_scene() {
 
     //auto material2 = make_shared<lambertian>(color(0.4, 0.2, 0.1));
     //world.add(make_shared<sphere>(point3(-4, 1, 0), 1, material2));
-
-    auto material4 = make_shared<lambert>(color(1, 0, 0),0.5,1.0);
-    auto material5 = make_shared<lambert>(color(0, 0, 1),0.5,0.3);
-    auto material6 = make_shared<lambert>(color(1, 1, 0),0.7,0.2);
+    /*
+    auto material4 = make_shared<lambert>(color(1, 0, 0),0.5,64);
+    auto material5 = make_shared<lambert>(color(0, 0, 1),0.5,64);
+    auto material6 = make_shared<lambert>(color(1, 1, 0),0.7,64);
     auto material3 = make_shared<metal>(color(0.7, 0.6, 0.5), 0.0);
     world.add(make_shared<sphere>(point3(4, 1, 0), 1, material4));
     world.add(make_shared<sphere>(point3(-4, 1, 0), 1, material5));
     world.add(make_shared<sphere>(point3(0, 1, 0), 1, material6));
+    */
+
+    double diff=0.35;
+    double spec=32;
+    auto john = make_shared<lambert>(Brown, diff, spec);
+	auto mary = make_shared<lambert>(color(0.52, 0.8, 0.91), diff, spec);
+	auto angel = make_shared<lambert>(color(0.7,0.7,0.7), diff, spec);
+	auto jesus = make_shared<lambert>(White, diff, spec);
+	auto king1 = make_shared<lambert>(Red, diff, spec);
+	auto king2 = make_shared<lambert>(Green, diff , spec);
+	auto king3 = make_shared<lambert>(Blue, diff, spec);
+
+    world.add(make_shared<sphere>(point3(-0.1, 2, 4.7), 2, jesus));
+    world.add(make_shared<sphere>(point3(-4, 4, 0), 4, john));
+    world.add(make_shared<sphere>(point3(3.2, 3, 0.5), 3, mary));
+    world.add(make_shared<sphere>(point3(13, 4, 3.4 - 4 * 2.4), 4, king1));
+    world.add(make_shared<sphere>(point3(13+4*2, 4, 3.4-4*1.2), 4, king2));
+    world.add(make_shared<sphere>(point3(13+4*4, 4, 3.4), 4, king3));
+    world.add(make_shared<sphere>(point3(-16, 2.5, 1.3), 2.5, angel));
+
+
 
     return world;
 }
@@ -115,13 +165,13 @@ hittable_list random_scene() {
 int main()
 {
 	//generate image
-	const char* filename = "out.png";
+	const char* filename = "out1.png";
 	std::vector<unsigned char> image;
 	const auto aspect_ratio = 1;
-	const int image_width = 512;
+	const int image_width = 1024;
 	const int image_height = static_cast<int>(image_width / aspect_ratio);
 	int total = image_width * image_height;
-    const int samples_per_pixel = 10;
+    const int samples_per_pixel = 100;
     const int max_depth = 50;
 	//image resizing
 	image.resize(image_width * image_height * 4);
@@ -129,30 +179,32 @@ int main()
     // World
 
     auto world = random_scene();
-
     // Camera
-
-    point3 lookfrom(9, 2, 18);
-    point3 lookat(0, 1, 0);
+    
+    point3 lookfrom(6, 75, 150);
+    //point3 lookfrom(1, 2, 18);
+    point3 lookat(6, 1, 0);
     vec3 vup(0, 1, 0);
-    auto dist_to_focus = 10.0;
+    auto dist_to_focus = 100.0;
     auto aperture = 0.1;
 
     camera cam(lookfrom, lookat, vup, 20, aspect_ratio, aperture, dist_to_focus);
 
 	color defaultColor=Blue;
-	for (unsigned y = image_height-1; y >0; y--)
+	for (unsigned y = image_height - 1; y >0; y--)
 	{
 		for (unsigned x = 0; x < image_width; x++) 
         {
             color col(0, 0, 0);
             for (int s = 0; s < samples_per_pixel; ++s) {
-                auto u = (x + random_double()) / (image_width - 1);
-                auto v = (y + random_double()) / (image_height - 1);
-                ray r = cam.get_ray_perspective(u, v);
-            	col+= ray_color(r, world, max_depth,false);
+				auto u = (x + random_double()) / (image_width - 1);
+				auto v = (y + random_double()) / (image_height - 1);
+
+				ray ra = cam.get_ray_perspective(u, v);
+				col += ray_color(ra, world, max_depth);
 
             }
+            
 
 #pragma region Image File Color Translation
 			//conversion to unsigned char
@@ -185,6 +237,7 @@ int main()
         }
 	}
 	encodeOneStep(filename, image, image_width, image_height);
+
 
 	return 0;
 }

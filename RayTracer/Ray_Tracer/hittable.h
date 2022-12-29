@@ -14,6 +14,7 @@ struct hit_record {
     double v;//surface coordinates
     
     bool front_face;
+    bool hit_one_point;
     shared_ptr<material> mat_ptr;
     inline void set_face_normal(const ray& r, const vec3& outward_normal) 
     {

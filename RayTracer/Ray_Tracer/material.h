@@ -12,7 +12,7 @@ class material {
 public:
     virtual bool scatter(
         const ray& r_in, const hit_record& rec, color& attenuation, ray& scattered
-    ) const = 0;
+    ,std::vector<PointLight> lights=std::vector<PointLight>()) const = 0;
 
 
     virtual color emitted(double u, double v, const point3& p) const {
@@ -26,8 +26,8 @@ public:
     lambertian(shared_ptr<texture> a) : albedo(a) {}
 
     virtual bool scatter(
-        const ray& r_in, const hit_record& rec, color& attenuation, ray& scattered
-    ) const override {
+        const ray& r_in, const hit_record& rec, color& attenuation, ray& scattered,
+        std::vector<PointLight> lights) const override {
         auto scatter_direction = rec.normal + random_unit_vector();
         // Catch degenerate scatter direction
         if (scatter_direction.near_zero())
@@ -50,7 +50,8 @@ public:
     
 
     virtual bool scatter(
-        const ray& r_in, const hit_record& rec, color& attenuation, ray& scattered
+        const ray& r_in, const hit_record& rec, color& attenuation, ray& scattered,
+        std::vector<PointLight> lights
     ) const override {
         vec3 reflected = reflect(unit_vector(r_in.direction()), rec.normal);
         scattered = ray(rec.p, reflected + fuzz * random_in_unit_sphere());
@@ -67,7 +68,8 @@ class dielectric : public material {
 public:
     dielectric(double index_of_refraction) : ir(index_of_refraction) {}
 
-    virtual bool scatter(const ray& r_in, const hit_record& rec, color& attenuation, ray& scattered)const override 
+    virtual bool scatter(const ray& r_in, const hit_record& rec, color& attenuation, ray& scattered,
+        std::vector<PointLight> lights)const override
     {
         attenuation = color(1.0, 1.0, 1.0);
         double refraction_ratio = rec.front_face ? (1.0 / ir) : ir;
@@ -106,7 +108,8 @@ public:
     diffuse_light(color c) : emit(make_shared<solid_color>(c)) {}
 
     virtual bool scatter(
-        const ray& r_in, const hit_record& rec, color& attenuation, ray& scattered
+        const ray& r_in, const hit_record& rec, color& attenuation, ray& scattered,
+        std::vector<PointLight> lights
     ) const override {
         return false;
     }
@@ -125,7 +128,8 @@ public:
     basic_color(color a) :albedo(a)
     {}
 
-    virtual bool scatter(const ray& r_in, const hit_record& rec, color& attenuation, ray& scattered) const override
+    virtual bool scatter(const ray& r_in, const hit_record& rec, color& attenuation, ray& scattered,
+        std::vector<PointLight> lights) const override
     {
         attenuation = albedo;
         return true;
@@ -145,35 +149,32 @@ public:
 	    
     }
 
-	virtual bool scatter(const ray& r_in, const hit_record& rec, color& attenuation, ray& scattered) const override
+	virtual bool scatter(const ray& r_in, const hit_record& rec, color& attenuation, ray& scattered,
+        std::vector<PointLight> lights) const override
 	{
-        vec3 directionOfLight1(1, 8, 7);
-        vec3 directionOfLight2(9, 2, 9);
-        color lightColor1(0, 0, 1);
-        color lightColor2(1, 1, 1);
-        float intensityOfLight1 = 0.1;
-        float intensityOfLight2 = 0.4;
 
         vec3 normal = rec.normal;
 
-
-
-        float l1 = diffuseCoefficient* intensityOfLight1 * std::max(0.0, dot(directionOfLight1, normal));
-        float l2 = diffuseCoefficient * intensityOfLight2 * std::max(0.0, dot(directionOfLight2, normal));
-
-        float p = 50;
         
-        vec3 h1 = unit_vector(r_in.direction() + directionOfLight1);
-        vec3 h2 = unit_vector(r_in.direction() + directionOfLight2);
-        float blinn1 = intensityOfLight1 * std::pow((double)std::max(0.0, dot(normal, h1)),(double)p);
-        float blinn2 = intensityOfLight2 * std::pow((double)std::max(0.0, dot(normal, h2)),(double)p);
-        
-    	attenuation = (blinn2*lightColor2)+albedo*l2+ (blinn1 * lightColor1) + albedo * l1;
+        for (PointLight l : lights)
+        {
+            double lightValue = diffuseCoefficient * l.lightIntensity * std::max(0.0, dot(l.lightDirection, normal));
+            vec3 h = unit_vector(r_in.direction() + l.lightDirection);
+            float blinn = l.lightIntensity * std::pow((double)std::max(0.0, dot(normal, h)), (double)specularCoefficient);
+            attenuation += blinn * l.lightColor + albedo * lightValue;
+        }
+
+        auto scatter_direction = rec.normal + random_unit_vector();
+        // Catch degenerate scatter direction
+        if (scatter_direction.near_zero())
+            scatter_direction = rec.normal;
+
+        scattered = ray(rec.p, scatter_direction);
         return true;
 	}
 
 
-    float diffuseCoefficient;
+    double diffuseCoefficient;
     float specularCoefficient;
     color albedo;
 

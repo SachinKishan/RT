@@ -27,12 +27,17 @@ bool sphere:: hit(const ray& r, double t_min, double t_max, hit_record& rec) con
 
     auto discriminant = half_b * half_b - a * c;
     if (discriminant < 0) return false;
+    
     auto sqrtd = sqrt(discriminant);
 
     // Find the nearest root that lies in the acceptable range.
-    auto root = (-half_b - sqrtd) / a;
+
+    auto root1 = (-half_b - sqrtd) / a;
+    auto root2 = (-half_b + sqrtd) / a;
+    if (root1 == root2)rec.hit_one_point = true;
+    auto root = root1;
     if (root < t_min || t_max < root) {
-        root = (-half_b + sqrtd) / a;
+        root = root2;
         if (root < t_min || t_max < root)
             return false;
     }
