@@ -139,8 +139,10 @@
     <ClInclude Include="Matrix.h" />
     <ClInclude Include="PointLight.h" />
     <ClInclude Include="ray.h" />
+    <ClInclude Include="rectangle.h" />
     <ClInclude Include="sphere.h" />
     <ClInclude Include="texture.h" />
+    <ClInclude Include="triangle.h" />
     <ClInclude Include="utility.h" />
     <ClInclude Include="VectorMath.h" />
   </ItemGroup>

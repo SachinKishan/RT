@@ -46,22 +46,36 @@ public:
 
 class metal : public material {
 public:
-    metal(const color& a, double f=0) : albedo(a), fuzz(f < 1 ? f : 1) {}
-
-    
-
+    metal(const color& a,double diff,double spec, double f = 0) : albedo(a), fuzz(f < 1 ? f : 1),diffuseCoefficient(diff),specularCoefficient(spec) {}
     virtual bool scatter(
         const ray& r_in, const hit_record& rec, color& attenuation, ray& scattered,
         std::vector<PointLight> lights, std::vector<bool> shouldLight
     ) const override {
+
+        vec3 normal = rec.normal;
+
+        int i = 0;
+        for (PointLight l : lights)
+        {
+            if (shouldLight[i])
+            {
+                const double lightValue =  l.lightIntensity * std::max(0.0, dot(l.lightDirection, normal));
+                vec3 h = unit_vector(r_in.direction() + l.lightDirection);
+                const float blinn = l.lightIntensity * std::pow((double)std::max(0.0, dot(normal, h)), (double)specularCoefficient);
+                attenuation += blinn * l.lightColor + albedo * lightValue;
+            }i++;
+        }
+
         vec3 reflected = reflect(unit_vector(r_in.direction()), rec.normal);
         scattered = ray(rec.p, reflected + fuzz * random_in_unit_sphere());
-        attenuation = albedo;
+ //       attenuation = albedo;
         return (dot(scattered.direction(), rec.normal) > 0);
     }
 
 public:
     color albedo;
+    double diffuseCoefficient;
+    double specularCoefficient;
     double fuzz; 
 };
 

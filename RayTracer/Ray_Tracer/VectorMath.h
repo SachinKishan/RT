@@ -65,6 +65,12 @@ public:
         return vec3(random_double(min, max), random_double(min, max), random_double(min, max));
     }
 
+	inline vec3 norm()
+    {
+        const double l = 1 / length();
+        return vec3(e[0] * l,e[1]*l,e[2]*l);
+    }
+
 public:
     double e[3];
 };
