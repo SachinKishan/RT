@@ -131,16 +131,21 @@
     <ClCompile Include="Ray_Tracer.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="aabb.h" />
+    <ClInclude Include="box.h" />
+    <ClInclude Include="bvh.h" />
     <ClInclude Include="camera.h" />
     <ClInclude Include="hittable.h" />
     <ClInclude Include="hittable_list.h" />
     <ClInclude Include="lodepng.h" />
     <ClInclude Include="material.h" />
     <ClInclude Include="Matrix.h" />
+    <ClInclude Include="perlin.h" />
     <ClInclude Include="PointLight.h" />
     <ClInclude Include="ray.h" />
     <ClInclude Include="rectangle.h" />
     <ClInclude Include="sphere.h" />
+    <ClInclude Include="stb_image.h" />
     <ClInclude Include="texture.h" />
     <ClInclude Include="triangle.h" />
     <ClInclude Include="utility.h" />

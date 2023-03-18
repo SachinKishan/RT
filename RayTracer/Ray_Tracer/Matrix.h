@@ -10,9 +10,24 @@ public:
 
     T x[4][4] = { {1,0,0,0},{0,1,0,0},{0,0,1,0},{0,0,0,1} };
 
-    Matrix44()
+    Matrix44(double i=1)//meant for transformation matrices on rays and such
     {
-	    
+        /*x[0][0] = i;
+        x[0][1] = 0;
+        x[0][2] = 0;
+        x[0][3] = 0;
+        x[1][0] = 0;
+        x[1][1] = i;
+        x[1][2] = 0;
+        x[1][3] = 0;
+        x[2][0] = 0;
+        x[2][1] = 0;
+        x[2][2] = i;
+        x[2][3] = 0;
+        x[3][0] = 0;
+        x[3][1] = 0;
+        x[3][2] = 0;
+        x[3][3] = 0;*/
     }
 
     Matrix44
@@ -39,7 +54,27 @@ public:
         x[3][3] = p;
     }
 
-    const T* operator [] (uint8_t i) const { return x[i]; }
+    Matrix44 (vec3 a,vec3 b, vec3 c)
+    {
+        x[0][0] = a.x();
+        x[0][1] = b.x();
+        x[0][2] = c.x();
+        x[0][3] = 0;
+        x[1][0] = a.y();
+        x[1][1] = b.y();
+        x[1][2] = c.y();
+        x[1][3] = 0;
+        x[2][0] = a.z();
+        x[2][1] = b.z();
+        x[2][2] = c.z();
+        x[2][3] = 0;
+        x[3][0] = 0;
+        x[3][1] = 0;
+        x[3][2] = 0;
+        x[3][3] = 1;
+    }
+
+	const T* operator [] (uint8_t i) const { return x[i]; }
     T* operator [] (uint8_t i) { return x[i]; }
 
     static void multiply(const Matrix44<T>& a, const Matrix44& b, Matrix44& c)
@@ -56,6 +91,7 @@ public:
     {
         Matrix44 c;
         c.multiply(a, b, c);
+
         return c;
     }
 
@@ -147,7 +183,7 @@ public:
         dst[2] = c / w;
     }
 
-    vec3 multiplyVectorMatrix(vec3 src)//src=source vector
+    vec3 multiplyVectorMatrix(vec3 src)const //src=source vector 
     {
         vec3 destination;
         double a, b, c, w;
@@ -160,14 +196,21 @@ public:
         destination[0] = a / w;
         destination[1] = b / w;
         destination[2] = c / w;
-        
-        
-        return destination;
 
+        return destination;
     }
 
+    vec3 multiplyPointMatrix(point3 src)const
+    {
+        double a, b, c;
+        //vector is in row form. Vector * Matrix (V*M)
+        a = src.x() * x[0][0] + src.y() * x[1][0] + src.z() * x[2][0];
+        b = src.x() * x[0][1] + src.y() * x[1][1] + src.z() * x[2][1];
+        c = src.x() * x[0][2] + src.y() * x[1][2] + src.z() * x[2][2];
+        return vec3(a,b,c);
+    }
 
-    Matrix44<double> invert()
+    Matrix44<double> invert() 
     {
         Matrix44<double> inverse;
         double determinant =
@@ -210,10 +253,98 @@ public:
         
 #pragma endregion
 
-        //std::cout << std::endl << determinant;
-        inverse = inverse * determinant;
+        std::cout << std::endl << determinant;
+
+
+    	inverse = inverse * determinant;
         return inverse;
     }
+
+
+    Matrix44 real_inverse() const
+    {
+        int i, j, k;
+        Matrix44 s;
+        Matrix44 t(*this);
+
+        // Forward elimination
+        for (i = 0; i < 3; i++) {
+            int pivot = i;
+
+            T pivotsize = t[i][i];
+
+            if (pivotsize < 0)
+                pivotsize = -pivotsize;
+
+            for (j = i + 1; j < 4; j++) {
+                T tmp = t[j][i];
+
+                if (tmp < 0)
+                    tmp = -tmp;
+
+                if (tmp > pivotsize) {
+                    pivot = j;
+                    pivotsize = tmp;
+                }
+            }
+
+            if (pivotsize == 0) {
+                // Cannot invert singular matrix
+                return Matrix44();
+            }
+
+            if (pivot != i) {
+                for (j = 0; j < 4; j++) {
+                    T tmp;
+
+                    tmp = t[i][j];
+                    t[i][j] = t[pivot][j];
+                    t[pivot][j] = tmp;
+
+                    tmp = s[i][j];
+                    s[i][j] = s[pivot][j];
+                    s[pivot][j] = tmp;
+                }
+            }
+
+            for (j = i + 1; j < 4; j++) {
+                T f = t[j][i] / t[i][i];
+
+                for (k = 0; k < 4; k++) {
+                    t[j][k] -= f * t[i][k];
+                    s[j][k] -= f * s[i][k];
+                }
+            }
+        }
+
+        // Backward substitution
+        for (i = 3; i >= 0; --i) {
+            T f;
+
+            if ((f = t[i][i]) == 0) {
+                // Cannot invert singular matrix
+                return Matrix44();
+            }
+
+            for (j = 0; j < 4; j++) {
+                t[i][j] /= f;
+                s[i][j] /= f;
+            }
+
+            for (j = 0; j < i; j++) {
+                f = t[j][i];
+
+                for (k = 0; k < 4; k++) {
+                    t[j][k] -= f * t[i][k];
+                    s[j][k] -= f * s[i][k];
+                }
+            }
+        }
+
+        return s;
+    }
+
+
 	double AddAndMultiply(
         int a1, int a2, int a3, int a4, int a5, int a6,
         int a7, int a8, int a9, int a10, int a11, int a12,
@@ -229,6 +360,8 @@ public:
             x[a25][a26] * x[a27][a28] * x[a29][a30] -
             x[a31][a32] * x[a33][a34] * x[a35][a36];
     }
+
+
 
     void lookat(vec3 from, vec3 to, vec3 up)
     {
@@ -266,10 +399,17 @@ public:
         :Matrix44<double>(1, 0, 0, 0,
             0, 1, 0, 0,
             0, 0, 1, 0,
-            translate.x(), translate.y(), translate.z())
+            translate.x(), translate.y(), translate.z(),1),translationVector(translate)
     {
 
     }
+
+    Matrix44 inverse()
+    {
+        return TranslationMatrix(-translationVector);
+    }
+	vec3 translationVector;
+
 
 };
 
@@ -283,7 +423,14 @@ public:
 			(1, 0, 0, 0,
             0, cos(degrees), -sin(degrees), 0,
             0, sin(degrees), cos(degrees), 0,
-            0, 0, 0){}
+            0, 0, 0), degree(degrees) {}
+
+    RotationMatrixX inverse()
+    {
+        return RotationMatrixX(-degree);
+    }
+
+    double degree;
 };
 
 class RotationMatrixY :public Matrix44<double>
@@ -296,7 +443,15 @@ public:
         (cos(degrees), 0, sin(degrees), 0,
             0, 1,0, 0,
             -sin(degrees), 0, cos(degrees), 0,
-            0, 0, 0) {}
+            0, 0, 0), degree(degrees) {}
+
+
+    RotationMatrixY inverse()
+    {
+        return RotationMatrixY(-degree);
+    }
+
+    double degree;
 };
 
 class RotationMatrixZ :public Matrix44<double>
@@ -309,7 +464,15 @@ public:
         (cos(degrees), -sin(degrees), 0, 0,
             sin(degrees), cos(degrees), 0, 0,
             0, 0, 1, 0,
-            0, 0, 0) {}
+            0, 0, 0) ,  degree(degrees) {}
+
+
+	RotationMatrixZ inverse()
+	{
+        return RotationMatrixZ(-degree);
+    }
+
+    double degree;
 };
 
 class ScaleMatrix:public Matrix44<double>
@@ -337,4 +500,15 @@ public:
 
     
 };
+
+inline Matrix44<double> build_local_coords(vec3 n)
+{
+    //From "Building an Orthonormal Basis, Revisited", Duff et al.
+    float s = (n.z() < 0.0) ? -1.0 : 1.0;
+    float a = -1.0 / (s + n.z());
+    float b = n.x() * n.y() * a;
+    vec3 t = vec3(1.0 + s * n.x() * n.x() * a, s * b, -s * n.x());
+    vec3 bt = vec3(b, s + n.y() * n.y() * a, -n.y());
+    return Matrix44<double>(t, n, bt);
+}
 

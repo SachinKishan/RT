@@ -9,6 +9,7 @@
 ///Objects
 ///Scene manipulation
 ///
+///
 #include <algorithm>
 #include <functional>
 #include<stdlib.h>
@@ -17,12 +18,17 @@
 #include <iostream>
 #include <random>
 
+#include "aabb.h"
+#include "box.h"
+#include "bvh.h"
 #include "camera.h"
 #include "hittable.h"
 #include "hittable_list.h"
 #include "lodepng.h"
 #include "material.h"
+#include "perlin.h"
 #include "ray.h"
+#include "rectangle.h"
 #include "sphere.h"
 std::vector<unsigned char> backgroundimage; //the raw pixels
 unsigned bgwidth, bgheight;
@@ -53,24 +59,33 @@ void decodeOneStep(const char* filename) {
 color ray_color(const ray& r, const hittable_list& world, int depth, color defaultColor, float sx, float sy, bool scattering = true) {
     hit_record rec;
     std::vector<bool> shouldLight;
+    defaultColor = Black;
     if (depth <= 0)
         return color(0, 0, 0);
-
-    if (world.hit(r, 0.001, infinity, rec)) {
-        ray scattered;
-        color attenuation;
-        color finalCol;
-        color shadowing;
-        for (PointLight l : world.lights)
+    if (!world.hit(r, 0.001, infinity, rec))
+    {
+        return defaultColor;
+    } 
+    
+        //ray scattered;
+        //color attenuation;
+        //color finalCol;
+        //color shadowing;
+        /*for (PointLight l : world.lights)
         {
             bool blocked_by_all = true;
             hit_record shadowRec;
             vec3 dir = vec3(
-                l.lightDirection.x() + sx*0, 
-                l.lightDirection.y() + sy*0, 
+                l.lightDirection.x(),
+                l.lightDirection.y(),
                 l.lightDirection.z());
 
-        	ray shadow_ray(rec.p + (rec.normal * 1e-4), dir );
+            Matrix44<double> a = build_local_coords(dir);
+
+            ray shadow_ray(rec.p + (rec.normal * 1e-4), dir);
+
+            //shadow_ray.dir = a.multiplyVectorMatrix(shadow_ray.dir);
+            //shadow_ray.orig = a.multiplyVectorMatrix(shadow_ray.orig);
 
             if (world.hit(shadow_ray, 0.001, infinity, shadowRec))
             {
@@ -79,33 +94,143 @@ color ray_color(const ray& r, const hittable_list& world, int depth, color defau
             else { shouldLight.push_back(true); blocked_by_all = false; }
             shadowing = blocked_by_all ? Black : White;
 
-        }
-        
-        if (rec.mat_ptr->scatter(r, rec, attenuation, scattered,world.lights, shouldLight))
+        }*/
+        ray scattered;
+        color attenuation;
+        color emitted = rec.mat_ptr->emitted(rec.u, rec.v, rec.p);
+        if (!rec.mat_ptr->scatter(r, rec, attenuation, scattered,world.lights, shouldLight))
         {
-            if (scattering)
-                finalCol= attenuation * ray_color(scattered, world, depth - 1, defaultColor,sx,sy);
-            else
-                finalCol= attenuation;
-        	return finalCol*shadowing;
+            return emitted;
         }
-    	return color(0, 0, 0);
 
+
+
+        /*
+        if (scattering)
+            finalCol = attenuation * ray_color(scattered, world, depth - 1, defaultColor, sx, sy);
+        else
+            finalCol = attenuation;
+        attenuation = finalCol;
+        */
+
+        return emitted + attenuation * ray_color(scattered, world, depth-1, defaultColor, sx, sy);
+}
+
+hittable_list earth() {
+    auto earth_texture = make_shared<image_texture>("earthmap.jpg");
+    auto light = make_shared<diffuse_light>(color(15, 15, 15));
+
+    auto earth_surface = make_shared<lambertian>(Red);
+
+    auto globe = make_shared<sphere>(point3(0, 0, 0), 4, earth_surface);
+    auto l = make_shared<sphere>(point3(0, 4, 1), 0.5, light);
+    Matrix44<double> f(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1); 
+    ScaleMatrix scale(vec3(2, 1, 2));
+    TranslationMatrix translation(0, 0, 0);
+    f = f*scale* translation;
+    for(int i=0;i<4;i++)
+    {
+	    for(int j=0;j<4;j++)
+	    {
+            std::cout << f[i][j] << " ";
+	    }
+        std::cout << std::endl;
     }
+    auto spin = make_shared<instance>(globe, f);
 
-    vec3 unit_direction = unit_vector(r.direction());
-    auto t = 0.5 * (unit_direction.y() + 1.0);
+    hittable_list world;
+    world.add(l);
+    world.add(spin);
+
+    return world;
+}
+hittable_list cornell_box() {
+    hittable_list objects;
+
+    auto red = make_shared<lambertian>(color(.65, .05, .05));
+    auto white = make_shared<lambertian>(color(.73, .73, .73));
+    auto green = make_shared<lambertian>(color(.12, .45, .15));
+    auto light = make_shared<diffuse_light>(color(15, 15, 15));
+
+    objects.add(make_shared<yz_rect>(0, 555, 0, 555, 555, green));
+     objects.add(make_shared<yz_rect>(0, 555, 0, 555, 0, red));
+   objects.add(make_shared<xz_rect>(200, 343, 227, 320, 554, light));
+    objects.add(make_shared<xz_rect>(0, 555, 0, 555, 0, white));
+    objects.add(make_shared<xz_rect>(0, 555, 0, 555, 555, white));
+    objects.add(make_shared<xy_rect>(0, 555, 0, 555, 555, white));
+
+    auto ball = make_shared<sphere>(point3(200, 200, 200), 50, red);
+
+    auto cube=make_shared<box>(point3(130, 0, 65), point3(295, 165, 230), white);
+
+    RotationMatrixZ zRot(10);
+    RotationMatrixX XRot(1);
+    Matrix44<double> f(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
+    TranslationMatrix translation(0, 1, 1);
+
+    f = f * XRot * zRot * translation;
+
+	auto rotateCube = make_shared<instance>(cube, f);
+
+    objects.add(cube);
+    objects.add(rotateCube);
+    objects.add(ball);
+
+    return objects;
+}
 
 
-    return defaultColor;
+hittable_list cube_test_world()
+{
+    hittable_list world;
+
+    auto ground_material = make_shared<lambert>(color(0.75, 0.75, 0.5), 0.5, 0);
+    auto ground_material_l = make_shared<lambertian>(color(0.75, 0.75, 0.75));
+    hittable_list boxes2;
+    auto white = make_shared<lambertian>(.73);
+    int ns = 100;
+    //for (int j = 0; j < ns; j++) {
+       // boxes2.add(make_shared<sphere>(point3::random(0, 5), 1, material3));
+      //  boxes2.add(make_shared<sphere>(point3::random(0, 5), 1, material3));
+
+    //world.add(make_shared<bvh_node>(boxes2, 0, 1));
+
+
+    auto difflight = make_shared<diffuse_light>(color(4, 4, 4));
+    auto cube = make_shared<box>(point3(4, 4, 4), point3(9, 9, 9), white);
+    auto material2_lambert = make_shared<lambert>(color(0.4, 0.2, 0.1), 1.0, 0.2);
+    world.add(make_shared<sphere>(point3(0, -999, 0), 1000, material2_lambert));
+
+
+    auto l=(make_shared<sphere>(point3(7, 16, 7), 4, difflight));
+
+    RotationMatrixZ zRot(10);
+    RotationMatrixX XRot(1);
+    ScaleMatrix scale(vec3(2,2,2));
+    
+    Matrix44<double> f(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
+    TranslationMatrix translation(0, 0, 5);
+
+    
+    f = f * translation * scale;
+    auto scaledLight = make_shared<instance>(l, f);
+    auto rotateCube = make_shared<instance>(cube, RotationMatrixZ(45)*RotationMatrixX(45)*translation);
+    
+
+    world.add(l);
+    world.add(scaledLight);
+    world.add(cube);
+    world.add(rotateCube);
+
+    return world;
 }
 
 
 hittable_list random_scene() {
     hittable_list world;
 
-    auto ground_material = make_shared<lambert>(color(0.75, 0.75, 0.5),0.5,0);
-    world.add(make_shared<sphere>(point3(0, -1000, 0), 1000, ground_material));
+    auto ground_material = make_shared<lambert>(color(0.75, 0.75, 0.5), 0.5, 0);
+    auto ground_material_l = make_shared<lambertian>(color(0.75, 0.75, 0.75));
     
     vec3 directionOfLight1(7, 9, 9);
     vec3 directionOfLight2(-9, 10, 9);
@@ -117,7 +242,7 @@ hittable_list random_scene() {
     PointLight l1(intensityOfLight1, directionOfLight1, lightColor1);
     PointLight l2(intensityOfLight2, directionOfLight2, lightColor2);
     //world.lights.push_back(l1);
-	world.lights.push_back(l2);
+	//world.lights.push_back(l2);
 
 
 	/*
@@ -154,16 +279,19 @@ hittable_list random_scene() {
     //auto material1 = make_shared<dielectric>(1.5);
     //world.add(make_shared<sphere>(point3(0, 1, 0), 1, material1));
 
-    //auto material2 = make_shared<lambertian>(color(0.4, 0.2, 0.1));
+    auto material2 = make_shared<lambertian>(color(0.4, 0.2, 0.1));
+    auto material2_lambert = make_shared<lambert>(color(0.4, 0.2, 0.1),1.0,0.2);
+    world.add(make_shared<sphere>(point3(0, -999, 0), 1000, material2_lambert));
+
     //world.add(make_shared<sphere>(point3(-4, 1, 0), 1, material2));
     
     auto material4 = make_shared<lambert>(color(1, 0, 0),0.5,16);
     auto material5 = make_shared<lambert>(color(0, 0, 1),0.5,64);
     auto material6 = make_shared<lambert>(color(1, 1, 0),0.7,64);
-    auto material3 = make_shared<metal>(color(0.7, 0.6, 0.5), 0.0,1.0,128);
+    auto material3 = make_shared<metal>(color(1.0, 0.9, 0.5), 0.7,0.2,56);
     //world.add(make_shared<sphere>(point3(4, 1, 0), 1, material4));
     //world.add(make_shared<sphere>(point3(-4, 1, 0), 1, material5));
-   // world.add(make_shared<sphere>(point3(2, 5, 0), 0.5, material3));
+    //world.add(make_shared<sphere>(point3(2, 5, 0), 0.5, material3));
     
 
     double diff=0.35;
@@ -175,7 +303,7 @@ hittable_list random_scene() {
 	auto king1 = make_shared<lambert>(Red, diff, spec);
 	auto king2 = make_shared<lambert>(Green, diff , spec);
 	auto king3 = make_shared<lambert>(Blue, diff, spec);
-    world.add(make_shared<sphere>(point3(0, 3, 0), 2, king3));
+//    world.add(make_shared<sphere>(point3(0, 3, 0), 2, king3));
 
     //world.add(make_shared<sphere>(point3(-0.1, 2, 4.7), 2, jesus));
     //world.add(make_shared<sphere>(point3(-4, 4, 0), 4, john));
@@ -185,8 +313,24 @@ hittable_list random_scene() {
     //world.add(make_shared<sphere>(point3(13+4*4, 4, 3.4), 4, king3));
     //world.add(make_shared<sphere>(point3(-16, 2.5, 1.3), 2.5, angel));
 
+    hittable_list boxes2;
+    auto white = make_shared<lambertian>(.73);
+    int ns = 100;
+    //for (int j = 0; j < ns; j++) {
+       // boxes2.add(make_shared<sphere>(point3::random(0, 5), 1, material3));
+      //  boxes2.add(make_shared<sphere>(point3::random(0, 5), 1, material3));
 
+	//world.add(make_shared<bvh_node>(boxes2, 0, 1));
 
+    
+        auto difflight = make_shared<diffuse_light>(color(4, 4, 4));
+        world.add(make_shared<xy_rect>(3, 5, 1, 3, -2, difflight));
+        world.add(make_shared<xy_rect>(-3, -5, 1, 3, -2, difflight));
+        boxes2.add(make_shared<sphere>(point3(0, 2, 0), 2, material3));
+        boxes2.add(make_shared<sphere>(point3(0, 5, 0), 0.5, difflight));
+
+	world.add(make_shared<bvh_node>(boxes2, 0.0, 1.0));
+    
     return world;
 }
 
@@ -199,31 +343,33 @@ int main()
 	const char* filename = "out1.png";
 	std::vector<unsigned char> image;
 	const auto aspect_ratio = 1;
-	const int image_width = 1024;
+	const int image_width = 512;
 	const int image_height = static_cast<int>(image_width / aspect_ratio);
 	int total = image_width * image_height;
-    const int samples_per_pixel = 10;
-    const int max_depth = 5;
+    const int samples_per_pixel = 20;
+    const int max_depth = 20;
 	//image resizing
 	image.resize(image_width * image_height * 4);
 
     // World
 
-    
-    
-    auto world = random_scene();
-    // Camera
+//    auto world = random_scene();
+//    auto world = cornell_box();
+    auto world = cube_test_world();
+
+
+	// Camera
     
     //point3 lookfrom(6, 75, 150);
-    point3 lookfrom(9, 12, 30);
-    point3 lookat(0, 1, 0);
+    vec3 lookfrom = point3(30, 10, -30);
+    vec3 lookat = point3(7, 7, 7);
     vec3 vup(0, 1, 0);
-    auto dist_to_focus = 50;
+    auto dist_to_focus = 100;
     auto aperture = 1;
 
-    camera cam(lookfrom, lookat, vup, 20, aspect_ratio, aperture, dist_to_focus);
+    camera cam(lookfrom, lookat, vup, 40, aspect_ratio, aperture, dist_to_focus);
 
-	color defaultColor=Blue;
+    color defaultColor = Blue;
 
     //soft shadows
     const size_t elements = samples_per_pixel;
@@ -231,7 +377,7 @@ int main()
     std::vector<float> py(elements);
     std::vector<float> sx(elements);
     std::vector<float> sy(elements);
-    std::uniform_real_distribution<float> distribution(0.0f, 1.0f); 
+    std::uniform_real_distribution<float> distribution(-1.0f, 1.0f); 
     std::mt19937 engine; // Mersenne twister MT19937
     auto generator = std::bind(distribution, engine);
     std::generate_n(px.begin(), elements, generator);
@@ -242,7 +388,7 @@ int main()
     std::shuffle(std::begin(sx), std::end(sx), rng);
     std::shuffle(std::begin(sy), std::end(sy), rng);
     //
-    
+    /*
 	for (unsigned y = image_height - 1; y >0; y--)
 	{
 		for (unsigned x = 0; x < image_width; x++) 
@@ -294,8 +440,20 @@ int main()
         }
 	}
 	encodeOneStep(filename, image, image_width, image_height);
-    
-    
+    */
+    Matrix44<double> m = ScaleMatrix(vec3(2, 4, 8)) * TranslationMatrix(1, 2, 3);
+
+    for(int i=0;i<4;i++)
+    {
+	    for(int j=0;j<4;j++)
+	    {
+            std::cout << m[i][j] << " ";
+
+	    }    std::cout << std::endl;
+
+    }
+
+
 	return 0;
 }
 
