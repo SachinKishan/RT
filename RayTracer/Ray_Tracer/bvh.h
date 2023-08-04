@@ -8,13 +8,7 @@
 #include "hittable_list.h"
 #include "aabb.h"
 
-
-inline int random_int(int min, int max) {
-    // Returns a random integer in [min,max].
-    return static_cast<int>(random_double(min, max + 1));
-}
-
-
+#include "utility.h"
 inline bool box_compare(const shared_ptr<hittable> a, const shared_ptr<hittable> b, int axis) {
     aabb box_a;
     aabb box_b;

@@ -1,7 +1,7 @@
 #pragma once
-#include "bvh.h"
 #include "texture.h"
 #include "utility.h"
+
 
 class perlin {
 public:

@@ -193,11 +193,38 @@ public:
         c = src.x() * x[0][2] + src.y() * x[1][2] + src.z() * x[2][2] + x[3][2];
         w = src.x() * x[0][3] + src.y() * x[1][3] + src.z()* x[2][3] + x[3][3];
 
-        destination[0] = a / w;
-        destination[1] = b / w;
-        destination[2] = c / w;
+        //destination[0] = a / w;
+       // destination[1] = b / w;
+       // destination[2] = c / w;
 
-        return destination;
+        return vec3(a,b,c);
+    }
+
+    vec3 multiplyVec3(vec3 src) const //meant for 3x3 mats
+    {
+        vec3 destination;
+        double a, b, c;
+        //vector is in row form. Vector * Matrix (V*M)
+        a = src.x() * x[0][0] + src.y() * x[1][0] + src.z() * x[2][0];
+        b = src.x() * x[0][1] + src.y() * x[1][1] + src.z() * x[2][1];
+        c = src.x() * x[0][2] + src.y() * x[1][2] + src.z() * x[2][2];
+
+
+        return (vec3(a, b, c ));
+    }
+
+    vec4 multiplyVec4(vec4 src) const
+    {
+        vec3 destination;
+        double a, b, c, w;
+        //vector is in row form. Vector * Matrix (V*M)
+        a = src.x() * x[0][0] + src.y() * x[1][0] + src.z() * x[2][0] + src.w*x[3][0];
+        b = src.x() * x[0][1] + src.y() * x[1][1] + src.z() * x[2][1] + src.w*x[3][1];
+        c = src.x() * x[0][2] + src.y() * x[1][2] + src.z() * x[2][2] + src.w*x[3][2];
+        w = src.x() * x[0][3] + src.y() * x[1][3] + src.z() * x[2][3] + src.w*x[3][3];
+
+        
+        	return (vec4(a,b,c,w));
     }
 
     vec3 multiplyPointMatrix(point3 src)const
@@ -390,7 +417,7 @@ public:
 		:Matrix44<double>(1, 0, 0, 0,
 						 0, 1, 0, 0,
 						 0, 0, 1, 0,
-						 _x, _y, _z)
+						 _x, _y, _z,1)
     {
         
     }
@@ -479,6 +506,13 @@ class ScaleMatrix:public Matrix44<double>
 {
 public:
     ScaleMatrix() = default;
+    ScaleMatrix(double x, double y, double z):
+	Matrix44<double>(
+        x, 0, 0, 0,
+        0, y, 0, 0,
+        0, 0, z, 0,
+        0, 0, 0){}
+
     ScaleMatrix(vec3 scale):
 		Matrix44<double>(
         scale.x(), 0, 0, 0,

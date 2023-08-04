@@ -167,6 +167,21 @@ inline vec3 random_in_unit_disk() {
     }
 }
 
+class vec4 : public vec3
+{
+public :
+    double w;
+    vec4() = default;
+    vec4(double _x, double _y, double _z, double _w):vec3(vec3(_x,_y,_z)),w(_w)
+    {}
+    vec4(vec3 v, double _w): vec3(v)
+    {
+        w = _w;
+    }
+
+
+};
+
 class ray {
 public:
 

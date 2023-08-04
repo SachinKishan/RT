@@ -6,17 +6,66 @@
 #include "VectorMath.h"
 #include "texture.h"
 #include "hittable.h"
+#include "onb.h"
+#include "pdf.h"
 struct hit_record;
+
+struct scatter_record {
+    ray specular_ray;
+    bool is_specular;
+    color attenuation;
+    shared_ptr<pdf> pdf_ptr;
+};
 
 class material {
 public:
+    //scatter with pdf 
     virtual bool scatter(
         const ray& r_in, const hit_record& rec, color& attenuation, ray& scattered
     ,std::vector<PointLight> lights
-    ,std::vector<bool> shouldLight) const = 0;
+    ,std::vector<bool> shouldLight
+    ,double &pdf) const
+    {
+        return false;
+    }
+	
+    virtual bool scatter(
+        const ray& r_in, const hit_record& rec, scatter_record& srec
+    ) const {
+        return false;
+    }
 
 
-    virtual color emitted(double u, double v, const point3& p) const {
+    //normal scatter
+    virtual bool scatter(
+        const ray& r_in, const hit_record& rec, color& attenuation, ray& scattered
+        , std::vector<PointLight> lights
+        , std::vector<bool> shouldLight)
+        const
+        {
+            return false;
+        }
+
+
+    virtual double scattering_pdf(
+        const ray& r_in, const hit_record& rec, const ray& scattered
+    ) const {
+        return 0;
+    }
+
+    //virtual color emitted(double u, double v, const point3& p) const {
+      //  return color(0, 0, 0);
+   // }
+
+    /*virtual color emitted(const ray& r_in, const hit_record& rec, double u, double v,
+        const point3& p) const {
+
+        return color(0, 0, 0);
+
+    }*/
+    virtual color emitted(
+        const ray& r_in, const hit_record& rec, double u, double v, const point3& p
+    ) const {
         return color(0, 0, 0);
     }
 };
@@ -26,29 +75,49 @@ public:
     lambertian(const color& a) : albedo(make_shared<solid_color>(a)) {}
     lambertian(shared_ptr<texture> a) : albedo(a) {}
 
-    virtual bool scatter(
+    /*virtual bool scatter(
         const ray& r_in, const hit_record& rec, color& attenuation, ray& scattered,
-        std::vector<PointLight> lights, std::vector<bool> shouldLight) const override {
-        auto scatter_direction = rec.normal + random_unit_vector();
+        std::vector<PointLight> lights, std::vector<bool> shouldLight, double &pdf) const override {
+        onb uvw;
+        uvw.build_from_w(rec.normal);
+    	auto scatter_direction = rec.normal + random_unit_vector();
+        auto direction = uvw.local(random_cosine_direction());
         // Catch degenerate scatter direction
-        if (scatter_direction.near_zero())
-            scatter_direction = rec.normal;
+        //if (scatter_direction.near_zero())
+          //  scatter_direction = rec.normal;
 
         
-        scattered = ray(rec.p, scatter_direction);
-        attenuation = albedo->value(rec.u, rec.v, rec.p);
+        scattered = ray(rec.p, unit_vector(direction));
 
+        attenuation = albedo->value(rec.u, rec.v, rec.p);
+        
+//        pdf = dot(rec.normal, scattered.direction()) / pi;
+        pdf = dot(uvw.w(), scattered.direction()) / pi;
+        return true;
+    }*/
+
+    virtual bool scatter(
+        const ray& r_in, const hit_record& rec, scatter_record& srec
+    ) const override {
+        srec.is_specular = false;
+        srec.attenuation = albedo->value(rec.u, rec.v, rec.p);
+        srec.pdf_ptr = make_shared<cosine_pdf>(rec.normal); //new cosine_pdf(rec.normal);
         return true;
     }
-
+	double scattering_pdf(
+        const ray& r_in, const hit_record& rec, const ray& scattered
+    ) const override{
+        auto cosine = dot(rec.normal, unit_vector(scattered.direction()));
+        return cosine < 0 ? 0 : cosine / pi;
+    }
 public:
     shared_ptr<texture> albedo;
 };
 
 class metal : public material {
 public:
-    metal(const color& a,double diff,double spec,int n, double f = 0) : albedo(a), fuzz(f < 1 ? f : 1),diffuseCoefficient(diff),specularCoefficient(spec) {}
-    virtual bool scatter(
+    metal(const color& a,double diff,double spec=256,int n=8, double f = 0) : albedo(a), fuzz(f < 1 ? f : 1),diffuseCoefficient(diff),specularCoefficient(spec) {}
+   /* virtual bool scatter(
         const ray& r_in, const hit_record& rec, color& attenuation, ray& scattered,
         std::vector<PointLight> lights, std::vector<bool> shouldLight
     ) const override {
@@ -73,6 +142,19 @@ public:
         attenuation = albedo;
         return (dot(scattered.direction(), rec.normal) > 0);
     }
+    */
+
+    virtual bool scatter(
+        const ray& r_in, const hit_record& rec, scatter_record& srec
+    ) const override {
+        vec3 reflected = reflect(unit_vector(r_in.direction()), rec.normal);
+        srec.specular_ray = ray(rec.p, reflected + fuzz * random_in_unit_sphere());
+        srec.attenuation = albedo;
+        srec.is_specular = true;
+        srec.pdf_ptr = 0;
+        return true;
+    }
+
 
 public:
     color albedo;
@@ -85,7 +167,7 @@ public:
 class dielectric : public material {
 public:
     dielectric(double index_of_refraction) : ir(index_of_refraction) {}
-
+    /*
     virtual bool scatter(const ray& r_in, const hit_record& rec, color& attenuation, ray& scattered,
         std::vector<PointLight> lights, std::vector<bool> shouldLight)const override
     {
@@ -106,6 +188,33 @@ public:
 
         scattered = ray(rec.p, direction);
         return true;
+    }*/
+
+    virtual bool scatter(
+        const ray& r_in, const hit_record& rec, scatter_record& srec
+    ) const override {
+        srec.is_specular = true;
+        srec.pdf_ptr = nullptr;
+        srec.attenuation = color(1.0, 1.0, 1.0);
+       // double refraction_ratio = rec.front_face ? (1.0 / ir) : ir;
+        //attenuation = color(1.0, 1.0, 1.0);
+        double refraction_ratio = rec.front_face ? (1.0 / ir) : ir;
+
+        vec3 unit_direction = unit_vector(r_in.direction());
+        double cos_theta = fmin(dot(-unit_direction, rec.normal), 1.0);
+        double sin_theta = sqrt(1.0 - cos_theta * cos_theta);
+
+        bool cannot_refract = refraction_ratio * sin_theta > 1.0;
+        vec3 direction;
+
+        if (cannot_refract || reflectance(cos_theta, refraction_ratio) > random_double())
+            direction = reflect(unit_direction, rec.normal);
+        else
+            direction = refract(unit_direction, rec.normal, refraction_ratio);
+            srec.specular_ray = ray(rec.p, direction);
+            //scattered = ray(rec.p, direction);
+            return true;
+        return true;
     }
 
 public:
@@ -125,16 +234,22 @@ public:
     diffuse_light(shared_ptr<texture> a) : emit(a) {}
     diffuse_light(color c) : emit(make_shared<solid_color>(c)) {}
 
-    virtual bool scatter(
+	bool scatter(
         const ray& r_in, const hit_record& rec, color& attenuation, ray& scattered,
         std::vector<PointLight> lights, std::vector<bool> shouldLight
     ) const override {
         return false;
     }
 
-    virtual color emitted(double u, double v, const point3& p) const override {
-        return emit->value(u, v, p);
+	color emitted(const ray& r_in, const hit_record& rec, double u, double v,
+        const point3& p) const override{
+    	if (rec.front_face)
+            return emit->value(u, v, p);
+        else
+            return color(0, 0, 0);
     }
+
+
 
 public:
     shared_ptr<texture> emit;

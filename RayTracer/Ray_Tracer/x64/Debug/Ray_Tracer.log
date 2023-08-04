@@ -1,47 +1,8 @@
 ﻿  Ray_Tracer.cpp
-C:\Users\sachi\OneDrive\Documents\ComputerGraphics\Ray Tracer Better\RT\RayTracer\Ray_Tracer\Matrix.h(507,13): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
-C:\Users\sachi\OneDrive\Documents\ComputerGraphics\Ray Tracer Better\RT\RayTracer\Ray_Tracer\Matrix.h(508,13): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
-C:\Users\sachi\OneDrive\Documents\ComputerGraphics\Ray Tracer Better\RT\RayTracer\Ray_Tracer\Matrix.h(509,13): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
-C:\Users\sachi\OneDrive\Documents\ComputerGraphics\Ray Tracer Better\RT\RayTracer\Ray_Tracer\material.h(66,54): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
-C:\Users\sachi\OneDrive\Documents\ComputerGraphics\Ray Tracer Better\RT\RayTracer\Ray_Tracer\material.h(66,35): warning C4244: 'initializing': conversion from 'double' to 'const float', possible loss of data
-C:\Users\sachi\OneDrive\Documents\ComputerGraphics\Ray Tracer Better\RT\RayTracer\Ray_Tracer\material.h(183,74): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
-C:\Users\sachi\OneDrive\Documents\ComputerGraphics\Ray Tracer Better\RT\RayTracer\Ray_Tracer\material.h(183,35): warning C4244: 'initializing': conversion from 'double' to 'const float', possible loss of data
+C:\Users\sachi\OneDrive\Documents\ComputerGraphics\Ray Tracer Better\RT\RayTracer\Ray_Tracer\Matrix.h(541,13): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
+C:\Users\sachi\OneDrive\Documents\ComputerGraphics\Ray Tracer Better\RT\RayTracer\Ray_Tracer\Matrix.h(542,13): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
+C:\Users\sachi\OneDrive\Documents\ComputerGraphics\Ray Tracer Better\RT\RayTracer\Ray_Tracer\Matrix.h(543,13): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
+C:\Users\sachi\OneDrive\Documents\ComputerGraphics\Ray Tracer Better\RT\RayTracer\Ray_Tracer\material.h(298,74): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
+C:\Users\sachi\OneDrive\Documents\ComputerGraphics\Ray Tracer Better\RT\RayTracer\Ray_Tracer\material.h(298,35): warning C4244: 'initializing': conversion from 'double' to 'const float', possible loss of data
 C:\Users\sachi\OneDrive\Documents\ComputerGraphics\Ray Tracer Better\RT\RayTracer\Ray_Tracer\sphere.h(3,10): warning C4067: unexpected tokens following preprocessor directive - expected a newline
-C:\Users\sachi\OneDrive\Documents\ComputerGraphics\Ray Tracer Better\RT\RayTracer\Ray_Tracer\Ray_Tracer.cpp(239,35): warning C4305: 'initializing': truncation from 'double' to 'float'
-C:\Users\sachi\OneDrive\Documents\ComputerGraphics\Ray Tracer Better\RT\RayTracer\Ray_Tracer\Ray_Tracer.cpp(240,34): warning C4305: 'initializing': truncation from 'double' to 'float'
-C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.32.31326\include\xutility(149,77): warning C4244: 'argument': conversion from '_Ty' to 'float', possible loss of data
-          with
-          [
-              _Ty=int
-          ]
-C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.32.31326\include\memory(2010): message : see reference to function template instantiation 'void std::_Construct_in_place<_Ty,vec3,double,int>(_Ty &,vec3 &&,double &&,int &&) noexcept(false)' being compiled
-          with
-          [
-              _Ty=lambert
-          ]
-C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.32.31326\include\memory(2729): message : see reference to function template instantiation 'std::_Ref_count_obj2<lambert>::_Ref_count_obj2<_Ty,double,int>(_Ty &&,double &&,int &&)' being compiled
-          with
-          [
-              _Ty=color
-          ]
-C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.32.31326\include\memory(2730): message : see reference to function template instantiation 'std::_Ref_count_obj2<lambert>::_Ref_count_obj2<_Ty,double,int>(_Ty &&,double &&,int &&)' being compiled
-          with
-          [
-              _Ty=color
-          ]
-C:\Users\sachi\OneDrive\Documents\ComputerGraphics\Ray Tracer Better\RT\RayTracer\Ray_Tracer\Ray_Tracer.cpp(187): message : see reference to function template instantiation 'std::shared_ptr<lambert> std::make_shared<lambert,color,double,int>(color &&,double &&,int &&)' being compiled
-C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.32.31326\include\xutility(149,77): warning C4244: 'argument': conversion from '_Ty' to 'float', possible loss of data
-          with
-          [
-              _Ty=double
-          ]
-C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.32.31326\include\xutility(149,77): warning C4244: 'argument': conversion from 'double' to 'float', possible loss of data
-C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.32.31326\include\memory(2010): message : see reference to function template instantiation 'void std::_Construct_in_place<_Ty,const color&,double&,double&>(_Ty &,const color &,double &,double &) noexcept(false)' being compiled
-          with
-          [
-              _Ty=lambert
-          ]
-C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.32.31326\include\memory(2729): message : see reference to function template instantiation 'std::_Ref_count_obj2<lambert>::_Ref_count_obj2<const color&,double&,double&>(const color &,double &,double &)' being compiled
-C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.32.31326\include\memory(2730): message : see reference to function template instantiation 'std::_Ref_count_obj2<lambert>::_Ref_count_obj2<const color&,double&,double&>(const color &,double &,double &)' being compiled
-C:\Users\sachi\OneDrive\Documents\ComputerGraphics\Ray Tracer Better\RT\RayTracer\Ray_Tracer\Ray_Tracer.cpp(299): message : see reference to function template instantiation 'std::shared_ptr<lambert> std::make_shared<lambert,const color&,double&,double&>(const color &,double &,double &)' being compiled
   Ray_Tracer.vcxproj -> C:\Users\sachi\OneDrive\Documents\ComputerGraphics\Ray Tracer Better\RT\RayTracer\x64\Debug\Ray_Tracer.exe

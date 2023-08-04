@@ -1,10 +1,7 @@
 // Ray_Tracer.cpp : This file contains the 'main' function. Program execution begins and ends there.
-//
-
-
 
 ///Todo
-//////All original RT Features
+///
 ///Camera
 ///Objects
 ///Scene manipulation
@@ -22,14 +19,17 @@
 #include "box.h"
 #include "bvh.h"
 #include "camera.h"
+#include "constant_medium.h"
 #include "hittable.h"
 #include "hittable_list.h"
 #include "lodepng.h"
 #include "material.h"
+#include "pdf.h"
 #include "perlin.h"
 #include "ray.h"
 #include "rectangle.h"
 #include "sphere.h"
+
 std::vector<unsigned char> backgroundimage; //the raw pixels
 unsigned bgwidth, bgheight;
 
@@ -56,7 +56,7 @@ void decodeOneStep(const char* filename) {
 
 
 
-color ray_color(const ray& r, const hittable_list& world, int depth, color defaultColor, float sx, float sy, bool scattering = true) {
+color ray_color(const ray& r, const hittable_list& world, int depth, color defaultColor, shared_ptr<hittable>&lights, bool scattering = true) {
     hit_record rec;
     std::vector<bool> shouldLight;
     defaultColor = Black;
@@ -95,14 +95,35 @@ color ray_color(const ray& r, const hittable_list& world, int depth, color defau
             shadowing = blocked_by_all ? Black : White;
 
         }*/
+    /*
         ray scattered;
-        color attenuation;
-        color emitted = rec.mat_ptr->emitted(rec.u, rec.v, rec.p);
-        if (!rec.mat_ptr->scatter(r, rec, attenuation, scattered,world.lights, shouldLight))
+        color albedo;
+        color emitted = rec.mat_ptr->emitted(r,rec,rec.u, rec.v, rec.p);
+        double pdf_val;
+		if (!rec.mat_ptr->scatter(r, rec, albedo, scattered,world.lights, shouldLight,pdf_val))
         {
             return emitted;
         }
 
+        auto p0 = make_shared<hittable_pdf>(lights, rec.p);
+        auto p1 = make_shared<cosine_pdf>(rec.normal);
+        mixture_pdf mixed_pdf(p0, p1);
+
+
+       // hittable_pdf light_pdf(lights, rec.p);
+       // scattered = ray(rec.p, light_pdf.generate());
+       // pdf_val = light_pdf.value(scattered.direction());
+
+
+        scattered = ray(rec.p, mixed_pdf.generate());
+
+	    pdf_val = mixed_pdf.value(scattered.direction());
+
+        return emitted
+            + albedo * rec.mat_ptr->scattering_pdf(r, rec, scattered)
+            * ray_color(scattered, world, depth-1, defaultColor, lights) / pdf_val;
+
+*/
 
 
         /*
@@ -112,10 +133,30 @@ color ray_color(const ray& r, const hittable_list& world, int depth, color defau
             finalCol = attenuation;
         attenuation = finalCol;
         */
+       // return emitted + albedo * ray_color(scattered, world, depth - 1, defaultColor);
 
-        return emitted + attenuation * ray_color(scattered, world, depth-1, defaultColor, sx, sy);
+    scatter_record srec;
+    color emitted = rec.mat_ptr->emitted(r, rec, rec.u, rec.v, rec.p);
+    if (!rec.mat_ptr->scatter(r, rec, srec))
+        return emitted;
+    if (srec.is_specular) {
+        return srec.attenuation
+            * ray_color(srec.specular_ray, world, depth - 1, defaultColor, lights);
+    }
+    auto light_ptr = make_shared<hittable_pdf>(lights, rec.p);
+    mixture_pdf p(light_ptr, srec.pdf_ptr);
+
+    ray scattered = ray(rec.p, p.generate());
+    auto pdf_val = p.value(scattered.direction());
+
+    return emitted
+        + srec.attenuation * rec.mat_ptr->scattering_pdf(r, rec, scattered)
+        * ray_color(scattered, world, depth - 1, defaultColor, lights) / pdf_val;
+
+
+
 }
-
+/*
 hittable_list earth() {
     auto earth_texture = make_shared<image_texture>("earthmap.jpg");
     auto light = make_shared<diffuse_light>(color(15, 15, 15));
@@ -144,6 +185,7 @@ hittable_list earth() {
 
     return world;
 }
+
 hittable_list cornell_box() {
     hittable_list objects;
 
@@ -179,7 +221,6 @@ hittable_list cornell_box() {
     return objects;
 }
 
-
 hittable_list cube_test_world()
 {
     hittable_list world;
@@ -209,22 +250,18 @@ hittable_list cube_test_world()
     ScaleMatrix scale(vec3(2,2,2));
     
     Matrix44<double> f(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
-    TranslationMatrix translation(0, 0, 5);
+    TranslationMatrix translation(0, 0, 0);
 
     
-    f = f * translation * scale;
-    auto scaledLight = make_shared<instance>(l, f);
-    auto rotateCube = make_shared<instance>(cube, RotationMatrixZ(45)*RotationMatrixX(45)*translation);
+    auto rotateCube = make_shared<instance>(cube, RotationMatrixZ(45) * RotationMatrixX(45));
     
 
     world.add(l);
-    world.add(scaledLight);
-    world.add(cube);
+   // world.add(cube);
     world.add(rotateCube);
 
     return world;
 }
-
 
 hittable_list random_scene() {
     hittable_list world;
@@ -274,7 +311,7 @@ hittable_list random_scene() {
                 }
             }
         }
-    }*/
+    }
 
     //auto material1 = make_shared<dielectric>(1.5);
     //world.add(make_shared<sphere>(point3(0, 1, 0), 1, material1));
@@ -334,6 +371,76 @@ hittable_list random_scene() {
     return world;
 }
 
+hittable_list cornell_smoke() {
+    hittable_list objects;
+
+    auto red = make_shared<lambertian>(color(.65, .05, .05));
+    auto white = make_shared<lambertian>(color(.73, .73, .73));
+    auto green = make_shared<lambertian>(color(.12, .45, .15));
+    auto light = make_shared<diffuse_light>(color(7, 7, 7));
+
+    objects.add(make_shared<yz_rect>(0, 555, 0, 555, 555, green));
+    objects.add(make_shared<yz_rect>(0, 555, 0, 555, 0, red));
+    objects.add(make_shared<xz_rect>(113, 443, 127, 432, 554, light));
+    objects.add(make_shared<xz_rect>(0, 555, 0, 555, 555, white));
+    objects.add(make_shared<xz_rect>(0, 555, 0, 555, 0, white));
+    objects.add(make_shared<xy_rect>(0, 555, 0, 555, 555, white));
+
+    shared_ptr<hittable> box1 = make_shared<box>(point3(0, 0, 0), point3(165, 330, 165), white);
+
+    RotationMatrixY rotY1(15);
+    RotationMatrixY rotY2(-18);
+
+    Matrix44<double> f2 = rotY2*TranslationMatrix(vec3(130, 0, 65));
+    Matrix44<double> f1 = rotY1;
+
+	box1 = make_shared<instance>(box1, f1);
+
+    shared_ptr<hittable> box2 = make_shared<box>(point3(0, 0, 0), point3(165, 165, 165), white);
+    box2 = make_shared<instance>(box2, f2);
+
+    objects.add(make_shared<constant_medium>(box1, 0.01, color(0, 0, 0)));
+    //objects.add(make_shared<constant_medium>(box2, 0.01, color(1, 1, 1)));
+
+    return objects;
+}
+*/
+
+hittable_list cornell_box_working()
+{
+    hittable_list objects;
+
+    auto red = make_shared<lambertian>(color(.65, .05, .05));
+    auto white = make_shared<lambertian>(color(.73, .73, .73));
+    auto green = make_shared<lambertian>(color(.12, .45, .15));
+    auto light = make_shared<diffuse_light>(color(15, 15, 15));
+
+    objects.add(make_shared<yz_rect>(0, 555, 0, 555, 555, green));
+    objects.add(make_shared<yz_rect>(0, 555, 0, 555, 0, red));
+    //objects.add(make_shared<xz_rect>(213, 343, 227, 332, 554, light));
+    objects.add(make_shared<flip_face>(make_shared<xz_rect>(213, 343, 227, 332, 554, light)));
+    objects.add(make_shared<xz_rect>(0, 555, 0, 555, 555, white));
+    objects.add(make_shared<xz_rect>(0, 555, 0, 555, 0, white));
+    objects.add(make_shared<xy_rect>(0, 555, 0, 555, 555, white));
+
+    shared_ptr<hittable> box1 = make_shared<box>(point3(0, 0, 0), point3(165, 330, 165), white);
+    //shared_ptr<material> aluminum = make_shared<metal>(color(0.8, 0.85, 0.88), 0.0);
+   // shared_ptr<hittable> box1 = make_shared<box>(point3(0, 0, 0), point3(165, 330, 165), aluminum);
+	box1 = make_shared<rotate_y>(box1, 15);
+    box1 = make_shared<translate>(box1, vec3(265, 0, 295));
+    objects.add(box1);
+
+    auto glass = make_shared<dielectric>(1.5);
+    objects.add(make_shared<sphere>(point3(190, 90, 190), 90, glass));
+    /*
+    shared_ptr<hittable> box2 = make_shared<box>(point3(0, 0, 0), point3(165, 165, 165), white);
+    box2 = make_shared<rotate_y>(box2, -18);
+    box2 = make_shared<translate>(box2, vec3(130, 0, 65));
+    objects.add(box2);
+	*/
+    return objects;
+}
+
 int main()
 {
 	//generate image
@@ -346,8 +453,8 @@ int main()
 	const int image_width = 512;
 	const int image_height = static_cast<int>(image_width / aspect_ratio);
 	int total = image_width * image_height;
-    const int samples_per_pixel = 20;
-    const int max_depth = 20;
+    const int samples_per_pixel = 1000;
+    const int max_depth = 50;
 	//image resizing
 	image.resize(image_width * image_height * 4);
 
@@ -355,19 +462,27 @@ int main()
 
 //    auto world = random_scene();
 //    auto world = cornell_box();
-    auto world = cube_test_world();
-
+    auto world = cornell_box_working();
+    shared_ptr<hittable> lights = make_shared<sphere>(point3(190, 90, 190), 90, shared_ptr<material>());
+//        make_shared<xz_rect>(213, 343, 227, 332, 554, shared_ptr<material>());
+	//lights->add(make_shared<xz_rect>(213, 343, 227, 332, 554, shared_ptr<material>()));
+   // lights->add(make_shared<sphere>(point3(190, 90, 190), 90, shared_ptr<material>()));
 
 	// Camera
     
     //point3 lookfrom(6, 75, 150);
-    vec3 lookfrom = point3(30, 10, -30);
+   /* vec3 lookfrom = point3(30, 10, -30);
     vec3 lookat = point3(7, 7, 7);
-    vec3 vup(0, 1, 0);
+    vec3 vup(0, 1, 0);*/
     auto dist_to_focus = 100;
     auto aperture = 1;
 
-    camera cam(lookfrom, lookat, vup, 40, aspect_ratio, aperture, dist_to_focus);
+
+    vec3 lookfrom = point3(278, 278, -800);
+    vec3 lookat = point3(278, 278, 0);
+    vec3 vup(0, 1, 0);
+	float vfov = 40.0;
+    camera cam(lookfrom, lookat, vup, vfov, aspect_ratio, aperture, dist_to_focus);
 
     color defaultColor = Blue;
 
@@ -387,8 +502,8 @@ int main()
     auto rng = std::default_random_engine{};
     std::shuffle(std::begin(sx), std::end(sx), rng);
     std::shuffle(std::begin(sy), std::end(sy), rng);
-    //
-    /*
+
+    
 	for (unsigned y = image_height - 1; y >0; y--)
 	{
 		for (unsigned x = 0; x < image_width; x++) 
@@ -402,7 +517,7 @@ int main()
 				auto v = (y + py[s]) / (image_height - 1);
 
 				ray ra = cam.get_ray_perspective(u, v);
-				col += ray_color(ra, world, max_depth,defaultColor,sx[s],sy[s]);
+				col += ray_color(ra, world, max_depth,defaultColor, lights);
 
             }
 
@@ -418,13 +533,14 @@ int main()
             r = sqrt(scale * r);
             g = sqrt(scale * g);
             b = sqrt(scale * b);
-            
+            if (r != r) r = 0.0;
+            if (g != g) g = 0.0;
+            if (b != b) b = 0.0;
 			const unsigned char rf = static_cast<unsigned char>(std::min(1., r) * 255);
 			const unsigned char gf = static_cast<unsigned char>(std::min(1., g) * 255);
 			const unsigned char bf = static_cast<unsigned char>(std::min(1., b) * 255);
 			int val = 4 * image_width * (image_height - y) + 4 * x;
             //allot color
-			//int val = 4 * image_width * (image_height- y) + 4 * x;
 			image[val + 0] = rf;
 			image[val + 1] = gf;
 			image[val + 2] = bf;
@@ -440,11 +556,15 @@ int main()
         }
 	}
 	encodeOneStep(filename, image, image_width, image_height);
-    */
-    Matrix44<double> m = ScaleMatrix(vec3(2, 4, 8)) * TranslationMatrix(1, 2, 3);
+	
+    /*
+    Matrix44<double> m = ScaleMatrix(vec3(2, 4, 8));
+
+    vec4 p = m.multiplyVec4(vec4(1, 2, 3,0));
 
     for(int i=0;i<4;i++)
     {
+
 	    for(int j=0;j<4;j++)
 	    {
             std::cout << m[i][j] << " ";
@@ -452,6 +572,10 @@ int main()
 	    }    std::cout << std::endl;
 
     }
+
+    std::cout << p<<" " << p.w;
+    */
+   
 
 
 	return 0;
