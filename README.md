@@ -1,5 +1,5 @@
 # RT
-C++ Ray tracer
+C++ Ray tracer with montecarlo path tracing. 
 
 
 Some renders
